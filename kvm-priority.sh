@@ -43,6 +43,7 @@ for vm_pid in $(pidof kvm    2>/dev/null | \
   # Inform the user of the details
   printf "PID: %5d   -   PRIO: %3d   -   VM NAME: %s   -   IO CLASS AND PRIO: %s\n" $vm_pid $vm_prio $vm_name "$(ionice -p $vm_pid)"
   # Check if a priority level has been configured
+  vm_configured=false
   while IFS="|" read vmc_name vmc_prio vmc_ioclass vmc_ioprio ; do
     # Is the line a comment
     if [[ "$vmc_name" =~ ^# ]]; then
@@ -69,8 +70,12 @@ for vm_pid in $(pidof kvm    2>/dev/null | \
       fi
       # Change the IO settings
       ionice -c $vmc_ioclass -n $vmc_ioprio -p $vm_pid >/dev/null 2>&1
+      vm_configured=true
     fi
   done <"$CFG_FILE"
+  if ! $vm_configured ; then
+    echo "No setting requested for VM $vm_name, skip"
+  fi
   echo
 done
 
