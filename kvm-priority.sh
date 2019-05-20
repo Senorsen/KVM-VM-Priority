@@ -57,10 +57,12 @@ for vm_pid in $(pidof kvm    2>/dev/null | \
   vm_configured=false
   while IFS="|" read vmc_name vmc_prio vmc_ioclass vmc_ioprio ; do
     # Is the line a comment
-    if [[ "$vmc_name" =~ ^# ]]; then
+    case "$vmc_name" in
+    "#"*)
       # Comment
       continue
-    fi
+      ;;
+    esac
     # Sanity check
     [ "$vmc_name" != "" ] || \
       kvm_error "Found invalid VM name in cfg file"
