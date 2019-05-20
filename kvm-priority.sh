@@ -28,7 +28,7 @@ PSINFO="$(ps -xo pid,cmd)"
 
 qemu_threads() {
     # List processes that may be threads to a qemu-driven VM
-    # e.g. [vhost-1234] or [kvm-pit/1234]
+    # e.g. [vhost-1234] CPU threads or [kvm-pit/1234]
     awk '($2 ~ /^\[.*[/-]'"${1}"'\]$/) {print $1}' << EOF
 $PSINFO
 EOF
