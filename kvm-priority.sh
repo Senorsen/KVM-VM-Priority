@@ -18,9 +18,11 @@ function kvm_error {
   kvm_error "The configuration file '$CFG_FILE' is missing"
 
 # Loop through PID's of running VM's
+# Also look at qemu machines managed by libvirt
 for vm_pid in $(pidof kvm    2>/dev/null | \
                 xargs -n 1   2>/dev/null | \
-                sort | xargs 2>/dev/null) ; do
+                sort | xargs 2>/dev/null) \
+                $(for F in /var/run/libvirt/qemu/*.pid ; do [ -s "$F" ] && cat "$F" && echo "" ; done || true) ; do
   # Get the priorty value and name of the VM
   vm_prio=$(ps -o nice -p $vm_pid 2>/dev/null | \
             tail -n 1 | sed -e 's/^[^0-9\-]*//g')
