@@ -7,6 +7,12 @@ CFG_FILE="/etc/libvirt/vm-priority.cfg"
 ## TOUCH NOTHING BELOW THIS LINE ##
 ###################################
 
+# Ensure standard behavior for parsable tools
+LANG=C
+LC_ALL=C
+TZ=UTC
+export LANG LC_ALL TZ
+
 # Error handling
 function kvm_error {
   echo "ERROR: $1"
