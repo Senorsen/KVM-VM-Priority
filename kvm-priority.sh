@@ -87,7 +87,7 @@ for vm_pid in $(pidof kvm    2>/dev/null | \
           vm_prio=$(ps -o nice -p $vm_pid 2>/dev/null | \
             tail -n 1 | sed -e 's/^[^0-9\-]*//g')
         if [ "$vmc_prio" != "$vm_prio" ]; then
-          echo "  - Changing process priority for $vm_thread from $vm_prio to $vmc_prio"
+          echo "  - CHANGING process priority for $vm_thread from $vm_prio to $vmc_prio"
           renice -n $vmc_prio -p $vm_thread >/dev/null 2>&1
         else
           echo "  - Process priority of $vm_thread is correct, no adjustment needed"
@@ -100,7 +100,7 @@ for vm_pid in $(pidof kvm    2>/dev/null | \
           ; then
             echo "  - IO Priority of $vm_thread is correct, no adjustment needed"
           else
-            echo "  - Changing IO priority for $vm_thread from $vmt_ioclass $vmt_ioprio to $vmc_ioclass_txt:$vmc_ioprio"
+            echo "  - CHANGING IO priority for $vm_thread from $vmt_ioclass $vmt_ioprio to $vmc_ioclass_txt:$vmc_ioprio"
             ionice -c $vmc_ioclass -n $vmc_ioprio -p $vm_thread >/dev/null 2>&1
           fi
         done
