@@ -72,6 +72,13 @@ for vm_pid in $(pidof kvm    2>/dev/null | \
       kvm_error "Found invalid VM IO class in cfg file"
     [ "$vmc_ioprio" != "" ] || \
       kvm_error "Found invalid VM IO priority in cfg file"
+    case "$vmc_ioclass" in
+      0) vmc_ioclass_txt="none" ;; # reserved by ionice tool, interpretation depends on kernel version and CPU priority of the process
+      1) vmc_ioclass_txt="realtime" ;;
+      2) vmc_ioclass_txt="best-effort" ;;
+      3) vmc_ioclass_txt="idle" ;;
+      *) kvm_error "Found invalid VM IO priority in cfg file: '$vmc_ioclass'" ;;
+    esac
     # Check for a match
     if [ "$vmc_name" = "$vm_name" ]; then
       for vm_thread in $vm_pid $(qemu_threads $vm_pid) ; do
@@ -80,13 +87,23 @@ for vm_pid in $(pidof kvm    2>/dev/null | \
           vm_prio=$(ps -o nice -p $vm_pid 2>/dev/null | \
             tail -n 1 | sed -e 's/^[^0-9\-]*//g')
         if [ "$vmc_prio" != "$vm_prio" ]; then
-          echo "  - Changing priority for $vm_thread from $vm_prio to $vmc_prio"
+          echo "  - Changing process priority for $vm_thread from $vm_prio to $vmc_prio"
           renice -n $vmc_prio -p $vm_thread >/dev/null 2>&1
         else
-          echo "  - Priority of $vm_thread is correct, no adjustment needed"
+          echo "  - Process priority of $vm_thread is correct, no adjustment needed"
         fi
         # Change the IO settings
-        ionice -c $vmc_ioclass -n $vmc_ioprio -p $vm_thread >/dev/null 2>&1
+        # Lookup returns e.g. "idle" or "best-effort: prio 1"
+        ionice -p $vm_thread | while read vmt_ioclass _ION_PRIO vmt_ioprio ; do
+          if ( [ "$vmt_ioclass" = "$vmc_ioclass_txt" ] || [ "$vmt_ioclass" = "$vmc_ioclass_txt:" ] ) \
+          && ( [ -z "$vmt_ioprio" ] || [ "$vmt_ioprio" = "$vmc_ioprio" ] ) \
+          ; then
+            echo "  - IO Priority of $vm_thread is correct, no adjustment needed"
+          else
+            echo "  - Changing IO priority for $vm_thread from $vmt_ioclass $vmt_ioprio to $vmc_ioclass_txt:$vmc_ioprio"
+            ionice -c $vmc_ioclass -n $vmc_ioprio -p $vm_thread >/dev/null 2>&1
+          fi
+        done
       done
       vm_configured=true
     fi
