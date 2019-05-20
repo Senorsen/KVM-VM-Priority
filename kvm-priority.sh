@@ -52,7 +52,7 @@ for vm_pid in $(pidof kvm    2>/dev/null | \
   [ "$vm_name" != "" ] || \
     kvm_error "Unable to retrieve running VM name"
   # Inform the user of the details
-  printf "PID: %5d   -   PRIO: %3d   -   VM NAME: %s   -   IO CLASS AND PRIO: %s\n" $vm_pid $vm_prio $vm_name "$(ionice -p $vm_pid)"
+  printf "PID: %5d   -   PRIO: %3d   -   VM NAME: %s   -   IO CLASS AND PRIO: %s\n" "$vm_pid" "$vm_prio" "$vm_name" "$(ionice -p $vm_pid)"
   # Check if a priority level has been configured
   vm_configured=false
   while IFS="|" read vmc_name vmc_prio vmc_ioclass vmc_ioprio ; do
