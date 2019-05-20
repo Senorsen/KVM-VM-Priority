@@ -23,6 +23,17 @@ function kvm_error {
 [ -f "$CFG_FILE" ] || \
   kvm_error "The configuration file '$CFG_FILE' is missing"
 
+# Cache ps output to avoid doing it in the loop
+PSINFO="$(ps -xo pid,cmd)"
+
+qemu_threads() {
+    # List processes that may be threads to a qemu-driven VM
+    # e.g. [vhost-1234] or [kvm-pit/1234]
+    awk '($2 ~ /^\[.*[/-]'"${1}"'\]$/) {print $1}' << EOF
+$PSINFO
+EOF
+}
+
 # Loop through PID's of running VM's
 # Also look at qemu machines managed by libvirt
 for vm_pid in $(pidof kvm    2>/dev/null | \
@@ -61,15 +72,20 @@ for vm_pid in $(pidof kvm    2>/dev/null | \
       kvm_error "Found invalid VM IO priority in cfg file"
     # Check for a match
     if [ "$vmc_name" = "$vm_name" ]; then
-      # Match found, check if the priority is different
-      if [ "$vmc_prio" != "$vm_prio" ]; then
-        echo "  - Changing priority from $vm_prio to $vmc_prio"
-        renice -n $vmc_prio -p $vm_pid >/dev/null 2>&1
-      else
-        echo "  - Priority is correct, no adjustment needed"
-      fi
-      # Change the IO settings
-      ionice -c $vmc_ioclass -n $vmc_ioprio -p $vm_pid >/dev/null 2>&1
+      for vm_thread in $vm_pid $(qemu_threads $vm_pid) ; do
+        # Match found, check if the priority is different
+        [ "$vm_thread" = "$vm_pid" ] || \
+          vm_prio=$(ps -o nice -p $vm_pid 2>/dev/null | \
+            tail -n 1 | sed -e 's/^[^0-9\-]*//g')
+        if [ "$vmc_prio" != "$vm_prio" ]; then
+          echo "  - Changing priority for $vm_thread from $vm_prio to $vmc_prio"
+          renice -n $vmc_prio -p $vm_thread >/dev/null 2>&1
+        else
+          echo "  - Priority of $vm_thread is correct, no adjustment needed"
+        fi
+        # Change the IO settings
+        ionice -c $vmc_ioclass -n $vmc_ioprio -p $vm_thread >/dev/null 2>&1
+      done
       vm_configured=true
     fi
   done <"$CFG_FILE"
