@@ -40,12 +40,13 @@ for vm_pid in $(pidof kvm    2>/dev/null | \
                 xargs -n 1   2>/dev/null | \
                 sort | xargs 2>/dev/null) \
                 $(for F in /var/run/libvirt/qemu/*.pid ; do [ -s "$F" ] && cat "$F" && echo "" ; done || true) ; do
+  ps -o cmd  -p $vm_pid 2>/dev/null | grep 'libvirtd$' >/dev/null && continue
   # Get the priorty value and name of the VM
   vm_prio=$(ps -o nice -p $vm_pid 2>/dev/null | \
             tail -n 1 | sed -e 's/^[^0-9\-]*//g')
   vm_name=$(ps -o cmd  -p $vm_pid 2>/dev/null | \
             tail -n 1 | sed -e 's/^[^0-9a-zA-Z]*//g' | \
-            sed -e 's/^.*-name\ \([a-zA-Z0-9]*\).*/\1/' 2>/dev/null)
+            sed -e 's/^.*guest=\([a-zA-Z0-9\-]*\).*/\1/' 2>/dev/null)
   # Sanity check
   [ "$vm_prio" != "" ] || \
     kvm_error "Unable to retrieve running VM priority"
